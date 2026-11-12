@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Área</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
+
+ <style>
+  body {
+    font-family: Arial;
+    padding: 10px;
+    background: #f5f7fa;
+  }
+
+  #titulo {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .luta {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+
+  .cabecalho {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 6px;
+  }
+
+  button {
+    margin: 4px 2px;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: #eee;
+    font-weight: bold;
+    font-size: 14px;
+    width: 48%;
+  }
+   /* atleta A (azul) */
+.btn-azul {
+  background: #1976d2;
+  color: white;
+}
+
+/* atleta B (claro) */
+.btn-branco {
+  background: #eeeeee;
+  color: black;
+}
+
+  button:hover {
+   opacity: 0.85;
+  }
+  
+    .btn-editar {
+    width: auto;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: #fff3cd;
+    color: #555;
+    font-size: 13px;
+  }
+
+  .finalizada {
+    color: green;
+    font-weight: bold;
+  }
+
+  .cancelada {
+    color: #999;
+    font-style: italic;
+  }
+</style>
+</head>
+
+<body>
+
+  <div class="container">
+
+
+    <h2 id="titulo"></h2>
+
+    <div id="fila"></div>
+
+  </div>
+
+</body>
+  
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="auth.js" data-papeis="admin,mesario"></script>
+<script src="judo-store.js"></script>
+<script>
+// ================= DADOS =================
+let areaId = Number(new URLSearchParams(location.search).get("area"));
+
+if (!areaId) {
+  document.body.innerHTML = "<h2>Erro: nenhuma área selecionada</h2>";
+  throw new Error("Sem área selecionada");
+}
+
+document.getElementById("titulo").innerText = "Área " + areaId;
+
+function rotuloTipo(tipo) {
+  if (tipo === "melhorDe3") return "Melhor de 3";
+  if (tipo === "rodizio") return "Rodízio";
+  return "Mata-mata";
+}
+
+// ================= AÇÕES (única tela que pode registrar resultado) =================
+// Toda ação de resultado passa OBRIGATORIAMENTE por atualizarResultado(),
+// função central do motor em judo-store.js. Esta tela nunca calcula
+// pontuação, nunca decide avanço de fase e nunca cria lutas — ela só
+// chama o motor e re-renderiza o que ele devolve.
+function registrar(idLuta, vencedor, tipoVitoria) {
+  atualizarResultado(idLuta, vencedor, tipoVitoria);
+  render();
+}
+function editarResultado(idLuta) {
+  if (!confirm("Editar o resultado desta luta?\nO resultado atual será apagado e você escolherá o novo.")) return;
+
+  let r = corrigirResultado(idLuta);   // vem do judo-store.js
+
+  if (!r.ok) {
+    alert(r.motivo);
+    return;
+  }
+  render();   // a luta volta pendente e os botões de resultado reaparecem
+}
+
+// ================= RENDER =================
+function render() {
+  let lutas = getLutasDaArea(areaId);
+  let html = "";
+
+  if (!lutas.length) {
+    html = "<p>Nenhuma luta atribuída a esta área ainda.</p>";
+  }
+
+  lutas.forEach((l, i) => {
+    let categoria = getCategoriaPorId(l.categoriaId);
+    let nomeCategoria = categoria ? categoria.nome : "Categoria";
+    let faseLabel = l.tipo === "rodizio" ? `Rodada ${l.fase}`
+      : l.tipo === "mataMata" ? `Fase ${l.fase}`
+      : `Luta ${l.fase}`;
+
+    let cabecalho = `${nomeCategoria} — ${rotuloTipo(l.tipo)} — ${faseLabel}`;
+    let corpo = "";
+
+        if (l.status === "finalizada") {
+      let tipoTexto = l.tipoVitoria ? ` (${l.tipoVitoria})` : "";
+      corpo = `
+        <span class="finalizada">✔ Vencedor: ${l.vencedor}${tipoTexto}</span><br>
+        <button class="btn-editar" onclick="editarResultado(${l.id})">✏️ Editar resultado</button>
+      `;
+    }
+
+    else if (l.status === "cancelada") {
+      corpo = `<span class="cancelada">Cancelada (série já decidida)</span>`;
+    }
+    else if (l.tipo === "mataMata") {
+  corpo = `
+    <div style="display:flex; gap:4px;">
+      <button class="btn-azul" onclick="registrar(${l.id},'${l.atletaA}',null)">
+        ${l.atletaA}
+      </button>
+
+      <button class="btn-branco" onclick="registrar(${l.id},'${l.atletaB}',null)">
+        ${l.atletaB}
+      </button>
+    </div>
+  `;
+}
+    else {
+      // Melhor de 3 / Rodízio: escolha do vencedor + tipo de vitória
+      corpo = `
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+  <button class="btn-azul" onclick="registrar(${l.id},'${l.atletaA}','ippon')">Ippon (${l.atletaA})</button>
+  <button class="btn-branco" onclick="registrar(${l.id},'${l.atletaB}','ippon')">Ippon (${l.atletaB})</button>
+
+  <button class="btn-azul" onclick="registrar(${l.id},'${l.atletaA}','waza')">Wazari (${l.atletaA})</button>
+  <button class="btn-branco" onclick="registrar(${l.id},'${l.atletaB}','waza')">Wazari (${l.atletaB})</button>
+
+  <button class="btn-azul" onclick="registrar(${l.id},'${l.atletaA}','yuko')">Yuko (${l.atletaA})</button>
+  <button class="btn-branco" onclick="registrar(${l.id},'${l.atletaB}','yuko')">Yuko (${l.atletaB})</button>
+</div>
+      `;
+    }
+
+    html += `
+      <div class="luta">
+        <div class="cabecalho">${cabecalho}</div>
+        <strong>#${i + 1} - ${l.atletaA} X ${l.atletaB}</strong><br>
+        ${corpo}
+      </div>
+    `;
+  });
+
+  document.getElementById("fila").innerHTML = html;
+}
+
+// Espera os dados chegarem do Firebase, desenha e depois redesenha
+// automaticamente a cada mudança vinda de qualquer dispositivo
+// (ex.: o motor adicionou uma nova luta de mata-mata nesta área).
+iniciarStore().then(() => {
+  render();
+  onStoreUpdate(() => render());
+});
+</script>
+
+</body>
+</html>

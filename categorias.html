@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Categorias</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --tinta: #0f2a4d;
+      --verde: #1c7a3f;
+      --verde-esc: #0f5128;
+      --papel: #f3f5f1;
+      --borda: #cfd6cb;
+      --cinza: #5c685a;
+      --perigo: #b3261e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--papel);
+      color: var(--tinta);
+      font-family: "Barlow", "Segoe UI", Arial, sans-serif;
+    }
+
+    /* ---------- Cabeçalho ---------- */
+    .topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    h1 {
+      margin: 0;
+      font-family: "Barlow Condensed", "Barlow", sans-serif;
+      font-size: 32px;
+      line-height: 1.1;
+    }
+    .sub { margin: 2px 0 0; font-size: 15px; color: var(--cinza); }
+
+    /* ---------- Painéis ---------- */
+    .painel {
+      margin-bottom: 18px;
+      padding: 16px 18px 18px;
+      background: #fff;
+      border: 2px solid var(--borda);
+      border-radius: 6px;
+    }
+    .painel h2 {
+      margin: 0 0 14px;
+      padding-bottom: 4px;
+      font-size: 20px;
+      color: var(--verde-esc);
+      border-bottom: 3px solid var(--verde);
+    }
+
+    /* ---------- Formulário ---------- */
+    label {
+      display: block;
+      margin: 0 0 4px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    input, textarea {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 9px 12px;
+      background: #fff;
+      border: 2px solid var(--borda);
+      border-radius: 6px;
+      font: inherit;
+      font-size: 16px;
+      color: var(--tinta);
+    }
+    input:focus, textarea:focus { outline: none; border-color: var(--tinta); }
+    textarea { resize: vertical; }
+    #nomeCategoria, #listaAtletas { max-width: 460px; }
+
+    .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .linha input { width: 200px; margin-bottom: 0; }
+
+    /* ---------- Botões ---------- */
+    .btn {
+      padding: 10px 16px;
+      border: 2px solid var(--tinta);
+      border-radius: 6px;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn.prim { background: var(--tinta); color: #fff; }
+    .btn.prim:hover { background: #17407a; }
+    .btn { transition: background .15s, border-color .15s, transform .08s; }
+    .btn:active { transform: scale(.97); }
+    /* feedback depois de adicionar a categoria */
+    .btn.prim.ok, .btn.prim.ok:hover { background: var(--verde); border-color: var(--verde); }
+    .btn.sec { background: #fff; color: var(--tinta); }
+    .btn.sec:hover { background: #eef1f6; }
+    .btn.perigo { background: #fff; color: var(--perigo); border-color: var(--perigo); }
+    .btn.perigo:hover { background: #fdeceb; }
+    .btn:focus-visible { outline: 3px solid #e0a800; outline-offset: 2px; }
+
+    /* ---------- Cartões (categorias e áreas) ---------- */
+    .grade {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      --cor: var(--tinta);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 2px solid var(--borda);
+      border-left: 8px solid var(--cor);
+      border-radius: 6px;
+    }
+    .card.area { --cor: var(--verde); }
+    .card .nome { margin: 0; font-size: 19px; line-height: 1.2; overflow-wrap: anywhere; }
+    .card .meta { margin: 0 0 6px; font-size: 15px; color: var(--cinza); }
+    .card .btn { margin-top: auto; }
+    .card .acoes { display: flex; gap: 8px; }
+    .card .acoes .btn { flex: 1; margin-top: 0; }
+
+    .vazio, #lista:empty::before {
+      grid-column: 1 / -1;
+      margin: 0;
+      font-size: 17px;
+      color: var(--cinza);
+    }
+    #lista:empty::before { content: "Nenhuma categoria cadastrada ainda."; }
+
+    @media (max-width: 640px) {
+      body { padding: 12px; }
+      h1 { font-size: 26px; }
+      .grade { grid-template-columns: minmax(0, 1fr); }
+      .linha input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topo">
+  <div>
+    <h1>Painel administrativo</h1>
+    <p class="sub">Cadastre as categorias, configure as áreas e distribua as lutas.</p>
+  </div>
+  <button class="btn perigo" onclick="resetarSistema()">Resetar campeonato</button>
+</header>
+
+<section class="painel">
+  <h2 id="tituloForm">Nova categoria</h2>
+
+  <label for="nomeCategoria">Nome da categoria</label>
+  <input id="nomeCategoria" placeholder="Nome da categoria">
+
+  <label for="listaAtletas">Atletas (um por linha)</label>
+  <textarea id="listaAtletas" rows="6" placeholder="Um atleta por linha"></textarea>
+
+  <button class="btn prim" id="btnAdicionar" onclick="adicionar()">Adicionar categoria</button>
+  <button class="btn prim" id="btnSalvar" onclick="salvarEdicao()" hidden>Salvar alterações</button>
+  <button class="btn sec" id="btnCancelar" onclick="cancelarEdicao()" hidden>Cancelar edição</button>
+</section>
+
+<section class="painel">
+  <h2>Áreas (tatames)</h2>
+
+  <div class="linha">
+    <input id="qtdAreas" type="number" min="1" placeholder="Quantidade de áreas" aria-label="Quantidade de áreas">
+    <button class="btn sec" onclick="configurarQtdAreas()">Configurar áreas</button>
+    <button class="btn prim" onclick="acaoDistribuirCampeonato()">🥋 Distribuir campeonato</button>
+  </div>
+
+  <div id="listaAreas" class="grade"></div>
+</section>
+
+<section class="painel">
+  <h2>Categorias</h2>
+  <div id="lista" class="grade"></div>
+</section>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="auth.js" data-papeis="admin"></script>
+<script src="judo-store.js"></script>
+<script>
+let categorias = [];
+
+iniciarStore().then(() => {
+  categorias = getCategorias();
+  render();
+  renderAreas();
+
+  onStoreUpdate(() => {
+    categorias = getCategorias();
+    render();
+    renderAreas();
+  });
+});
+
+function adicionar() {
+  let nome = document.getElementById("nomeCategoria").value;
+  let atletas = document.getElementById("listaAtletas").value
+    .split("\n").filter(n => n.trim() !== "");
+
+  if (!nome || atletas.length === 0) return alert("Preencha tudo");
+
+  // O motor (judo-store.js) decide o tipo de chaveamento, cria a
+  // categoria e gera as lutas iniciais. A distribuição só acontece
+  // ao clicar em "Distribuir Campeonato".
+  let { categoria } = criarCategoriaCompleta(nome, atletas);
+
+  categorias.push(categoria);
+
+  render();
+  feedbackAdicionado();
+
+  // limpa o formulário para a próxima categoria
+  document.getElementById("nomeCategoria").value = "";
+  document.getElementById("listaAtletas").value = "";
+  document.getElementById("nomeCategoria").focus();
+}
+
+// Só visual: o botão fica verde por um instante confirmando o clique.
+function feedbackAdicionado() {
+  let b = document.getElementById("btnAdicionar");
+  b.classList.add("ok");
+  b.textContent = "✔ Categoria adicionada!";
+  setTimeout(() => {
+    b.classList.remove("ok");
+    b.textContent = "Adicionar categoria";
+  }, 1500);
+}
+
+// ================= EDITAR / EXCLUIR CATEGORIA =================
+// Toda a regra fica no judo-store.js (editarCategoria, excluirCategoria,
+// categoriaIniciada). Esta tela só pede e mostra o resultado.
+
+let editandoId = null;   // id da categoria em edição (null = modo "nova categoria")
+
+function modoEdicao(editando) {
+  document.getElementById("btnAdicionar").hidden = editando;
+  document.getElementById("btnSalvar").hidden = !editando;
+  document.getElementById("btnCancelar").hidden = !editando;
+
+  if (!editando) {
+    editandoId = null;
+    document.getElementById("tituloForm").textContent = "Nova categoria";
+    document.getElementById("nomeCategoria").value = "";
+    document.getElementById("listaAtletas").value = "";
+  }
+}
+
+function cancelarEdicao() { modoEdicao(false); }
+
+function atualizarTela() {
+  categorias = getCategorias();
+  render();
+  renderAreas();
+}
+
+function editar(id) {
+  let c = categorias.find(x => x.id === id);
+  if (!c) return;
+
+  editandoId = id;
+  document.getElementById("nomeCategoria").value = c.nome;
+  document.getElementById("listaAtletas").value = c.atletas.join("\n");
+  document.getElementById("tituloForm").textContent = "Editar categoria: " + c.nome;
+  modoEdicao(true);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function salvarEdicao() {
+  let nome = document.getElementById("nomeCategoria").value;
+  let atletas = document.getElementById("listaAtletas").value
+    .split("\n").filter(n => n.trim() !== "");
+
+  if (!nome || atletas.length === 0) return alert("Preencha tudo");
+
+  let r = editarCategoria(editandoId, nome, atletas);   // judo-store.js
+  if (!r.ok) return alert(r.motivo);
+
+  let aviso = "Categoria atualizada.";
+  if (r.regenerou) {
+    aviso += "\nOs combates dela foram gerados novamente.";
+    if (r.redistribuida) {
+      aviso += "\nOs novos combates entraram no final das filas das áreas; as demais categorias não foram movidas.";
+    } else if (r.tinhaFila) {
+      aviso += "\nConfigure as áreas e clique em Distribuir campeonato para colocar os novos combates nas filas.";
+    }
+  }
+
+  modoEdicao(false);
+  atualizarTela();
+  alert(aviso);
+}
+
+function excluir(id) {
+  let c = categorias.find(x => x.id === id);
+  if (!c) return;
+
+  if (!confirm(`Excluir a categoria "${c.nome}"?\n\nAs lutas dela também serão removidas. As demais categorias não serão afetadas.`)) return;
+
+  if (categoriaIniciada(id) &&
+      !confirm(`ATENÇÃO: "${c.nome}" já tem lutas iniciadas ou finalizadas.\n\nOs resultados e a classificação dessa categoria serão PERDIDOS e não podem ser recuperados.\n\nConfirma a exclusão mesmo assim?`)) return;
+
+  let r = excluirCategoria(id);   // judo-store.js
+  if (!r.ok) return alert(r.motivo);
+
+  if (editandoId === id) modoEdicao(false);
+  atualizarTela();
+
+  alert(`Categoria "${c.nome}" excluída (${r.lutasRemovidas} luta(s) removida(s)).` +
+    (r.naFila ? "\nAs demais categorias continuam nas mesmas áreas, mas a carga entre as áreas pode ter ficado desigual. Nada foi redistribuído automaticamente." : ""));
+}
+
+async function resetarSistema() {
+  if (!confirm("Tem certeza que deseja apagar todo o campeonato?\n\nIsso apaga para TODOS os dispositivos conectados.")) return;
+
+  try {
+        const limite = new Promise((_, rej) =>
+      setTimeout(() => rej(new Error("Sem resposta do Firebase em 15s (rede ou regras?)")), 15000)
+    );
+    await Promise.race([resetarCampeonato(), limite]);
+  } catch (e) {
+    console.error(e);
+    return alert("Erro ao resetar o campeonato. Veja o console (F12).");
+  }
+
+  // limpa também o que é local deste aparelho
+  localStorage.removeItem(chaveLocal("numAreas"));
+  localStorage.removeItem(chaveLocal("categoriaAtual"));
+  localStorage.removeItem(chaveLocal("areaAtual"));
+
+  alert("Campeonato resetado com sucesso!");
+  location.reload();
+}
+  
+function render() {
+  let html = "";
+
+  categorias.forEach((c, i) => {
+    html += `
+      <article class="card cat">
+        <h3 class="nome">${c.nome}</h3>
+        <p class="meta">${c.atletas.length} atletas</p>
+        <button class="btn sec" onclick="abrir(${i})">Abrir (somente leitura)</button>
+        <div class="acoes">
+          <button class="btn sec" onclick="editar(${c.id})">Editar</button>
+          <button class="btn perigo" onclick="excluir(${c.id})">Excluir</button>
+        </div>
+      </article>
+    `;
+  });
+
+  document.getElementById("lista").innerHTML = html;
+}
+
+function abrir(i) {
+  // Registrar resultados agora só é feito na tela de ÁREA.
+  // Esta tela mostra o chaveamento em modo de leitura.
+  localStorage.setItem(chaveLocal("categoriaAtual"), JSON.stringify(categorias[i]));
+  window.open(urlSistema("chaveamento.html"), "_blank");
+}
+
+// ================= ÁREAS =================
+
+function configurarQtdAreas() {
+  let qtd = parseInt(document.getElementById("qtdAreas").value);
+  if (!qtd || qtd < 1) return alert("Informe uma quantidade válida de áreas");
+
+  configurarAreas(qtd);
+  renderAreas();
+}
+
+function acaoDistribuirCampeonato() {
+  let resultado = distribuirCampeonato(); // vem do judo-store.js
+
+  if (resultado === -1) {
+    alert("Configure as áreas (tatames) antes de distribuir.");
+    return;
+  }
+  if (resultado === 0) {
+    alert("Nenhuma luta nova para distribuir.");
+    return;
+  }
+
+  renderAreas();
+  alert(resultado + " lutas distribuídas entre as áreas!");
+}
+
+function renderAreas() {
+  let areas = getAreas();
+  let html = "";
+
+  areas.forEach(a => {
+    html += `
+      <article class="card area">
+        <h3 class="nome">Área ${a.id}</h3>
+        <p class="meta">${a.lutas.length} luta(s) na fila</p>
+        <button class="btn sec" onclick="abrirArea(${a.id})">Abrir área</button>
+      </article>
+    `;
+  });
+
+  document.getElementById("listaAreas").innerHTML = html || "<p class='vazio'>Nenhuma área configurada ainda.</p>";
+}
+
+function abrirArea(id) {
+  window.open(urlSistema("area.html?area=" + id), "_blank");
+}
+
+// Se a página for recarregada, mostra as áreas já configuradas antes
+renderAreas();
+</script>
+
+</body>
+</html>

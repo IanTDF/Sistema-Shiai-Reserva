@@ -1,0 +1,16 @@
+<h1>Sistema de Campeonato</h1>
+
+<a href="categorias.html">Ir para Categorias</a><br>
+<a href="area.html?area=1">Área 1</a><br>
+<a href="area.html?area=2">Área 2</a><br>
+<a href="chaveamento.html">Chaveamento</a>
+
+<!-- Seleciona o sistema pela URL (?sistema=...) e mantém o parâmetro nos links acima -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+document.querySelectorAll("a[href]").forEach(a => {
+  a.href = urlSistema(a.getAttribute("href"));
+});
+</script>
